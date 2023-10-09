@@ -14,13 +14,15 @@ contract TokenFacet is IERC20 {
     uint8 public decimals;
     string public symbol;
 
+    address owner_ = LibDiamond.contractOwner();
+
     constructor(
         uint256 _initialAmount,
         string memory _tokenName,
         uint8 _decimalUnits,
         string memory _tokenSymbol
     ) {
-        balances[msg.sender] = _initialAmount;
+        balances[owner_] = _initialAmount;
         totalSupply = _initialAmount;
         name = _tokenName;
         decimals = _decimalUnits;
@@ -32,12 +34,12 @@ contract TokenFacet is IERC20 {
         uint256 _value
     ) public override returns (bool success) {
         require(
-            balances[msg.sender] >= _value,
+            balances[owner_] >= _value,
             "token balance is lower than the value requested"
         );
-        balances[msg.sender] -= _value;
+        balances[owner_] -= _value;
         balances[_to] += _value;
-        emit Transfer(msg.sender, _to, _value); //solhint-disable-line indent, no-unused-vars
+        emit Transfer(owner_, _to, _value); //solhint-disable-line indent, no-unused-vars
         return true;
     }
 
@@ -46,7 +48,7 @@ contract TokenFacet is IERC20 {
         address _to,
         uint256 _value
     ) public override returns (bool success) {
-        uint256 allowance = allowed[_from][msg.sender];
+        uint256 allowance = allowed[_from][owner_];
         require(
             balances[_from] >= _value && allowance >= _value,
             "token balance or allowance is lower than amount requested"
@@ -54,7 +56,7 @@ contract TokenFacet is IERC20 {
         balances[_to] += _value;
         balances[_from] -= _value;
         if (allowance < MAX_UINT256) {
-            allowed[_from][msg.sender] -= _value;
+            allowed[_from][owner_] -= _value;
         }
         emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
         return true;
@@ -70,8 +72,8 @@ contract TokenFacet is IERC20 {
         address _spender,
         uint256 _value
     ) public override returns (bool success) {
-        allowed[msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _value); //solhint-disable-line indent, no-unused-vars
+        allowed[owner_][_spender] = _value;
+        emit Approval(owner_, _spender, _value); //solhint-disable-line indent, no-unused-vars
         return true;
     }
 
