@@ -5,6 +5,7 @@ import "../contracts/interfaces/IDiamondCut.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/OwnershipFacet.sol";
+import "../contracts/facets/TokenFacet.sol";
 import "../contracts/Diamond.sol";
 
 import "./helpers/DiamondUtils.sol";
@@ -22,6 +23,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         diamond = new Diamond(address(this), address(dCutFacet));
         dLoupe = new DiamondLoupeFacet();
         ownerF = new OwnershipFacet();
+        tokenF = new TokenFacet();
 
         //upgrade diamond with facets
 
@@ -41,6 +43,14 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
                 facetAddress: address(ownerF),
                 action: FacetCutAction.Add,
                 functionSelectors: generateSelectors("OwnershipFacet")
+            })
+        );
+
+        cut[2] = (
+            FacetCut({
+                facetAddress: address(tokenF),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("TokenFacet")
             })
         );
 
