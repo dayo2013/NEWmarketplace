@@ -14,10 +14,17 @@ contract TokenFacet is IERC20 {
     uint8 public decimals;
     string public symbol;
 
-    function balanceOf(
-        address _owner
-    ) public view override returns (uint256 balance) {
-        return balances[_owner];
+    constructor(
+        uint256 _initialAmount,
+        string memory _tokenName,
+        uint8 _decimalUnits,
+        string memory _tokenSymbol
+    ) {
+        balances[msg.sender] = _initialAmount;
+        totalSupply = _initialAmount;
+        name = _tokenName;
+        decimals = _decimalUnits;
+        symbol = _tokenSymbol;
     }
 
     function transfer(
@@ -51,6 +58,12 @@ contract TokenFacet is IERC20 {
         }
         emit Transfer(_from, _to, _value); //solhint-disable-line indent, no-unused-vars
         return true;
+    }
+
+    function balanceOf(
+        address _owner
+    ) public view override returns (uint256 balance) {
+        return balances[_owner];
     }
 
     function approve(
