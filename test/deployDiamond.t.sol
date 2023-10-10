@@ -16,19 +16,25 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     DiamondCutFacet dCutFacet;
     DiamondLoupeFacet dLoupe;
     OwnershipFacet ownerF;
+    TokenFacet tokenF;
 
     function testDeployDiamond() public {
         //deploy facets
         dCutFacet = new DiamondCutFacet();
-        diamond = new Diamond(address(this), address(dCutFacet));
+        diamond = new Diamond(
+            address(this),
+            address(dCutFacet),
+            "Blessed",
+            "BTK"
+        );
         dLoupe = new DiamondLoupeFacet();
         ownerF = new OwnershipFacet();
-        tokenF = new TokenFacet();
+        tokenF = new TokenFacet(18);
 
         //upgrade diamond with facets
 
         //build cut struct
-        FacetCut[] memory cut = new FacetCut[](2);
+        FacetCut[] memory cut = new FacetCut[](3);
 
         cut[0] = (
             FacetCut({
@@ -59,6 +65,15 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
 
         //call a function
         DiamondLoupeFacet(address(diamond)).facetAddresses();
+    }
+
+    function testName() public {
+        // assertEq(TokenFacet(address(diamond)).name, "Blessed");
+    }
+
+    function testTransfer() public {
+        vm.startPrank(address(0x1111));
+        tokenF(address(diamond)).mint(address);
     }
 
     function diamondCut(

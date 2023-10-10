@@ -47,6 +47,11 @@ library LibDiamond {
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
+        string name;
+        string symbol;
+        mapping(address => uint256) balances;
+        mapping(address => mapping(address => uint256)) allowed;
+        uint256 totalSupply;
     }
 
     function diamondStorage()
@@ -74,6 +79,18 @@ library LibDiamond {
 
     function contractOwner() internal view returns (address contractOwner_) {
         contractOwner_ = diamondStorage().contractOwner;
+    }
+
+    function setERC20Details(
+        uint256 _initialAmount,
+        string memory _name,
+        string memory _symbol
+    ) internal {
+        DiamondStorage storage ds = diamondStorage();
+        ds.balances[ds.contractOwner] = _initialAmount;
+        ds.totalSupply = _initialAmount;
+        ds.name = _name;
+        ds.symbol = _symbol;
     }
 
     function enforceIsContractOwner() internal view {
@@ -251,8 +268,8 @@ library LibDiamond {
                 .facetFunctionSelectors[_facetAddress]
                 .functionSelectors[lastSelectorPosition];
             ds.facetFunctionSelectors[_facetAddress].functionSelectors[
-                    selectorPosition
-                ] = lastSelector;
+                selectorPosition
+            ] = lastSelector;
             ds
                 .selectorToFacetAndPosition[lastSelector]
                 .functionSelectorPosition = uint96(selectorPosition);
