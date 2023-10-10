@@ -22,6 +22,10 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     NFTFacet nftFacet;
     Marketplace mPlace;
 
+    // Test-scoped state variables
+    address to;
+    uint256 tokenId;
+
     function setUp() public {
         //deploy facets
         dCutFacet = new DiamondCutFacet();
@@ -81,6 +85,10 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
 
         //call a function
         DiamondLoupeFacet(address(diamond)).facetAddresses();
+
+        to = address(0x1111);
+        tokenId = 1;
+        NFTFacet(address(diamond)).mint(to, tokenId);
     }
 
     function testNFTName() public {
@@ -92,48 +100,58 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     }
 
     function testMint() public {
-        uint _tokenId = 1;
-        address _to = address(0x1111);
-        vm.startPrank(_to);
-        NFTFacet(address(diamond)).mint(_to, _tokenId);
+        vm.startPrank(to);
 
-        assert(NFTFacet(address(diamond)).ownerOf(_tokenId) == _to);
+        assert(NFTFacet(address(diamond)).ownerOf(tokenId) == to);
     }
 
     function testFailMint() public {
-        uint _tokenId = 1;
-        address _to = address(0x1111);
         address _fakeAddress = address(0x2222);
-        vm.prank(_to);
-        NFTFacet(address(diamond)).mint(_to, _tokenId);
-
-        assert(NFTFacet(address(diamond)).ownerOf(_tokenId) == _fakeAddress);
+        vm.prank(to);
+        assert(NFTFacet(address(diamond)).ownerOf(tokenId) == _fakeAddress);
     }
 
     function testBurn() public {
-        uint tokenId_ = 1;
-        address to_ = address(0x1111);
-
-        vm.prank(to_);
-        NFTFacet(address(diamond)).mint(to_, tokenId_);
-        NFTFacet(address(diamond)).burn(tokenId_);
+        vm.prank(to);
+        // NFTFacet(address(diamond)).mint(to_, tokenId_);
+        NFTFacet(address(diamond)).burn(tokenId);
     }
 
     function testOwnerOf() public {
-        uint _tokenId = 1;
-        address _to = address(0x1111);
-        vm.prank(_to);
-        NFTFacet(address(diamond)).mint(_to, _tokenId);
+        vm.prank(to);
+        // NFTFacet(address(diamond)).mint(_to, _tokenId);
 
-        assert(NFTFacet(address(diamond)).ownerOf(_tokenId) == _to);
+        assert(NFTFacet(address(diamond)).ownerOf(tokenId) == to);
     }
 
-    function testTransfer() public {
-        uint tokenId = 1;
-        address to_ = address(0x1111);
-        vm.prank(_to);
-        NFTFacet(address(diamond)).mint();
+    function testBalanceOfWrongAddress() public {
+        address fakeAddress_ = address(0x2222);
+        assertEq(NFTFacet(address(diamond)).balanceOf(fakeAddress_), 0);
     }
+
+    function testBalanceOf() public {
+        vm.prank(to);
+        assertEq(NFTFacet(address(diamond)).balanceOf(to), 1);
+    }
+
+    function testFailTransferFrom() public {
+        address fakeAddress_ = address(0x2222);
+        vm.prank(to);
+        NFTFacet(address(diamond)).transferFrom(to, fakeAddress_, tokenId);
+    }
+
+    // function testTransferFrom() public {
+    //     address fakeAddress_ = address(0x2222);
+    //     address fakeAddress2_ = address(0x3333);
+    //     vm.prank(to);
+    //     // Approve the contract to make transfer
+    //     NFTFacet(address(diamond)).setApprovalForAll(fakeAddress_, true);
+    //     NFTFacet(address(diamond)).setApprovalForAll(fakeAddress2_, true);
+    //     NFTFacet(address(diamond)).setApprovalForAll(address(diamond), true);
+
+    //     NFTFacet(address(diamond)).approve(fakeAddress_, tokenId);
+    //     NFTFacet(address(diamond)).transferFrom(to, fakeAddress_, tokenId);
+    // }
 
     // function testTransfer() public {
     //     vm.startPrank(address(0x1111));
