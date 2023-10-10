@@ -7,6 +7,16 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 import {IDiamondCut} from "../interfaces/IDiamondCut.sol";
 
+struct Order {
+    address token;
+    uint256 tokenId;
+    uint256 price;
+    bytes signature;
+    uint88 deadline;
+    address owner;
+    bool active;
+}
+
 library LibDiamond {
     error InValidFacetCutAction();
     error NotDiamondOwner();
@@ -52,6 +62,15 @@ library LibDiamond {
         mapping(address => uint256) balances;
         mapping(address => mapping(address => uint256)) allowed;
         uint256 totalSupply;
+        string nftName;
+        string nftSymbol;
+        mapping(uint256 => address) nftOwners;
+        mapping(address => uint256) nftBalances;
+        mapping(uint256 => address) nftTokenApprovals;
+        mapping(address => mapping(address => bool)) nftOperatorApprovals;
+        mapping(uint256 => Order) mOrders;
+        address mAdmin;
+        uint256 mOrderId;
     }
 
     function diamondStorage()
@@ -91,6 +110,15 @@ library LibDiamond {
         ds.totalSupply = _initialAmount;
         ds.name = _name;
         ds.symbol = _symbol;
+    }
+
+    function setERC721Details(
+        string memory _name,
+        string memory _symbol
+    ) internal {
+        DiamondStorage storage ds = diamondStorage();
+        ds.nftName = _name;
+        ds.nftSymbol = _symbol;
     }
 
     function enforceIsContractOwner() internal view {
