@@ -5,14 +5,19 @@ import "../contracts/interfaces/IDiamondCut.sol";
 import {Marketplace} from "../contracts/facets/Marketplace.sol";
 import "../contracts/facets/NFTFacet.sol";
 import "../contracts/libraries/LibDiamond.sol";
-import "./helpers/Helpers.sol";
-import "./helpers/DiamondUtils.sol";
-import "../contracts/Diamond.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
+import "../contracts/facets/DiamondLoupeFacet.sol";
+import "../contracts/facets/OwnershipFacet.sol";
+import "./helpers/DiamondUtils.sol";
+import "./helpers/Helpers.sol";
+import "../contracts/Diamond.sol";
 
 contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
     Diamond diamond;
     DiamondCutFacet dCutFacet;
+    DiamondLoupeFacet dLoupe;
+    OwnershipFacet ownerF;
+
     Marketplace mPlace;
     NFTFacet nft;
 
@@ -27,8 +32,62 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
     Order order;
 
     function setUp() public {
-        mPlace = new Marketplace();
+        dCutFacet = new DiamondCutFacet();
+        diamond = new Diamond(
+            address(this),
+            address(dCutFacet),
+            "Blessed",
+            "BTK",
+            "MyNFT",
+            "MNT"
+        );
+        dLoupe = new DiamondLoupeFacet();
+        ownerF = new OwnershipFacet();
         nft = new NFTFacet();
+        mPlace = new Marketplace();
+
+        //upgrade diamond with facets
+
+        //build cut struct
+        FacetCut[] memory cut = new FacetCut[](4);
+
+        cut[0] = (
+            FacetCut({
+                facetAddress: address(dLoupe),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("DiamondLoupeFacet")
+            })
+        );
+
+        cut[1] = (
+            FacetCut({
+                facetAddress: address(ownerF),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("OwnershipFacet")
+            })
+        );
+
+        cut[2] = (
+            FacetCut({
+                facetAddress: address(nft),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("NFTFacet")
+            })
+        );
+
+        cut[3] = (
+            FacetCut({
+                facetAddress: address(mPlace),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("Marketplace")
+            })
+        );
+
+        //upgrade diamond
+        IDiamondCut(address(diamond)).diamondCut(cut, address(0x0), "");
+
+        //call a function
+        DiamondLoupeFacet(address(diamond)).facetAddresses();
 
         (userA, privKeyA) = mkaddr("USERA");
         (userB, privKeyB) = mkaddr("USERB");
@@ -51,7 +110,7 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userB);
 
         vm.expectRevert(Marketplace.NotOwner.selector);
-        mPlace.createOrder(order);
+        Marketplace(address(diamond)).createOrder(order);
     }
 
     function testNFTNotApproved() public {
@@ -63,6 +122,7 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
     function testMinPriceTooLow() public {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
+        // NFTFacet(address(diamond)).setApprovalForAll(address(diamond), true);
         order.price = 0;
         vm.expectRevert(Marketplace.MinPriceTooLow.selector);
         mPlace.createOrder(order);
@@ -88,14 +148,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyB
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyB
+        );
         vm.expectRevert(Marketplace.InvalidSignature.selector);
         mPlace.createOrder(order);
     }
@@ -111,15 +171,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
-        // vm.expectRevert(Marketplace.OrderNotExistent.selector);
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
 
         switchSigner(userB);
@@ -131,14 +190,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
         mPlace.editOrder(newOrderId, 0.01 ether, false);
 
@@ -163,14 +222,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
         mPlace.editOrder(newOrderId, 0.01 ether, false);
         switchSigner(userB);
@@ -182,14 +241,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
         switchSigner(userB);
         vm.expectRevert(
@@ -205,14 +264,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
         switchSigner(userB);
         vm.expectRevert(
@@ -228,14 +287,14 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         switchSigner(userA);
         nft.setApprovalForAll(address(mPlace), true);
         order.deadline = uint88(block.timestamp + 120 minutes);
-        // order.signature = constructSig(
-        //     order.token,
-        //     order.tokenId,
-        //     order.price,
-        //     order.deadline,
-        //     order.owner,
-        //     privKeyA
-        // );
+        order.signature = constructSig(
+            order.token,
+            order.tokenId,
+            order.price,
+            order.deadline,
+            order.owner,
+            privKeyA
+        );
         uint256 newOrderId = mPlace.createOrder(order);
         switchSigner(userB);
         uint256 userABalanceBefore = userA.balance;
@@ -252,4 +311,10 @@ contract MarketPlaceTest is Helpers, DiamondUtils, IDiamondCut {
         assertEq(NFTFacet(order.token).ownerOf(order.tokenId), userB);
         assertEq(userABalanceAfter, userABalanceBefore + order.price);
     }
+
+    function diamondCut(
+        FacetCut[] calldata _diamondCut,
+        address _init,
+        bytes calldata _calldata
+    ) external override {}
 }

@@ -64,14 +64,6 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
             })
         );
 
-        // cut[2] = (
-        //     FacetCut({
-        //         facetAddress: address(tokenF),
-        //         action: FacetCutAction.Add,
-        //         functionSelectors: generateSelectors("TokenFacet")
-        //     })
-        // );
-
         cut[2] = (
             FacetCut({
                 facetAddress: address(nftFacet),
@@ -92,10 +84,12 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     }
 
     function testNFTName() public {
+        // Test that the name of the NFT is the same as at construction time
         assertEq(NFTFacet(address(diamond)).name(), "MyNFT");
     }
 
     function testNFTSymbol() public {
+        // Test that the NFT synbol is the same as construction time
         assertEq(NFTFacet(address(diamond)).symbol(), "MNT");
     }
 
@@ -113,50 +107,61 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
 
     function testBurn() public {
         vm.prank(to);
-        // NFTFacet(address(diamond)).mint(to_, tokenId_);
         NFTFacet(address(diamond)).burn(tokenId);
     }
 
     function testOwnerOf() public {
+        // Test that the ownerOf an NFT is the current owner
         vm.prank(to);
-        // NFTFacet(address(diamond)).mint(_to, _tokenId);
-
         assert(NFTFacet(address(diamond)).ownerOf(tokenId) == to);
     }
 
     function testBalanceOfWrongAddress() public {
+        // Test that the balance of a wrong address is zero
         address fakeAddress_ = address(0x2222);
         assertEq(NFTFacet(address(diamond)).balanceOf(fakeAddress_), 0);
     }
 
     function testBalanceOf() public {
+        // Test that the balanceOf the owner of the token is the tokenId
         vm.prank(to);
-        assertEq(NFTFacet(address(diamond)).balanceOf(to), 1);
+        assertEq(NFTFacet(address(diamond)).balanceOf(to), tokenId);
+    }
+
+    function testBalanceOfAfterTransfer() public {
+        // Test that the recepient balance increases after transfer
+        address anotherAddress_ = address(0x2222);
+        vm.prank(to);
+        NFTFacet(address(diamond)).transferFrom(to, anotherAddress_, tokenId);
+        assertEq(NFTFacet(address(diamond)).balanceOf(anotherAddress_), 1);
     }
 
     function testFailTransferFrom() public {
+        // Test that only token owner can call transfer tokens (i.e., call transferFrom)
         address fakeAddress_ = address(0x2222);
-        vm.prank(to);
+        vm.prank(fakeAddress_);
         NFTFacet(address(diamond)).transferFrom(to, fakeAddress_, tokenId);
     }
 
-    // function testTransferFrom() public {
-    //     address fakeAddress_ = address(0x2222);
-    //     address fakeAddress2_ = address(0x3333);
-    //     vm.prank(to);
-    //     // Approve the contract to make transfer
-    //     NFTFacet(address(diamond)).setApprovalForAll(fakeAddress_, true);
-    //     NFTFacet(address(diamond)).setApprovalForAll(fakeAddress2_, true);
-    //     NFTFacet(address(diamond)).setApprovalForAll(address(diamond), true);
+    function testFailTransferFromAddressZero() public {
+        // Test that token cannot be transferred to an invalid address e.g., address(0)
+        vm.prank(to);
+        NFTFacet(address(diamond)).transferFrom(to, address(0), tokenId);
+    }
 
-    //     NFTFacet(address(diamond)).approve(fakeAddress_, tokenId);
-    //     NFTFacet(address(diamond)).transferFrom(to, fakeAddress_, tokenId);
-    // }
+    function testTransferFrom() public {
+        address anotherAddress_ = address(0x2222);
+        vm.prank(to);
+        NFTFacet(address(diamond)).transferFrom(to, anotherAddress_, tokenId);
+        assertEq(NFTFacet(address(diamond)).ownerOf(tokenId), anotherAddress_);
+    }
 
-    // function testTransfer() public {
-    //     vm.startPrank(address(0x1111));
-    //     tokenF(address(diamond)).mint(address);
-    // }
+    function testFailNonExistentToken() public {
+        address anotherAddress_ = address(0x2222);
+        vm.prank(to);
+        uint256 tokenId_ = 2;
+        NFTFacet(address(diamond)).transferFrom(to, anotherAddress_, tokenId_);
+    }
 
     function diamondCut(
         FacetCut[] calldata _diamondCut,

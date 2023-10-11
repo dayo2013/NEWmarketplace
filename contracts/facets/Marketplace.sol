@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {LibDiamond, Order} from "../libraries/LibDiamond.sol";
-import "./NFTFacet.sol";
+import {LibSign} from "../libraries/LibSign.sol";
 
-// import {SignUtils} from "./libraries/SignUtils.sol";
+import "./NFTFacet.sol";
 
 contract Marketplace {
     /* ERRORS */
@@ -38,19 +38,19 @@ contract Marketplace {
             revert MinDurationNotMet();
 
         // Assert signature
-        // if (
-        //     !SignUtils.isValid(
-        //         SignUtils.constructMessageHash(
-        //             l.token,
-        //             l.tokenId,
-        //             l.price,
-        //             l.deadline,
-        //             l.owner
-        //         ),
-        //         l.signature,
-        //         msg.sender
-        //     )
-        // ) revert InvalidSignature();
+        if (
+            !LibSign.isValid(
+                LibSign.constructMessageHash(
+                    l.token,
+                    l.tokenId,
+                    l.price,
+                    l.deadline,
+                    l.owner
+                ),
+                l.signature,
+                msg.sender
+            )
+        ) revert InvalidSignature();
 
         // append to Storage
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();

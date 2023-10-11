@@ -42,7 +42,7 @@ contract NFTFacet {
     );
 
     function _msgSender() internal view returns (address) {
-        return LibDiamond.contractOwner();
+        return msg.sender;
     }
 
     /**

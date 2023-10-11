@@ -16,25 +16,25 @@ abstract contract Helpers is Test {
         vm.label(addr, name);
     }
 
-    // function constructSig(
-    //     address _token,
-    //     uint256 _tokenId,
-    //     uint256 _price,
-    //     uint88 _deadline,
-    //     address _seller,
-    //     uint256 privKey
-    // ) public pure returns (bytes memory sig) {
-    //     bytes32 mHash = keccak256(
-    //         abi.encodePacked(_token, _tokenId, _price, _deadline, _seller)
-    //     );
+    function constructSig(
+        address _token,
+        uint256 _tokenId,
+        uint256 _price,
+        uint88 _deadline,
+        address _seller,
+        uint256 privKey
+    ) public returns (bytes memory sig) {
+        bytes32 mHash = keccak256(
+            abi.encodePacked(_token, _tokenId, _price, _deadline, _seller)
+        );
 
-    //     mHash = keccak256(
-    //         abi.encodePacked("\x19Ethereum Signed Message:\n32", mHash)
-    //     );
+        mHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", mHash)
+        );
 
-    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privKey, mHash);
-    //     sig = getSig(v, r, s);
-    // }
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privKey, mHash);
+        sig = getSig(v, r, s);
+    }
 
     function getSig(
         uint8 v,
@@ -45,13 +45,6 @@ abstract contract Helpers is Test {
     }
 
     function switchSigner(address _newSigner) public {
-        // address foundrySigner = 0x18;
-        // if (msg.sender == foundrySigner) {
-        //     vm.startPrank(_newSigner);
-        // } else {
-        //     vm.stopPrank();
-        //     vm.startPrank(_newSigner);
-        // }
         vm.startPrank(_newSigner);
         vm.deal(_newSigner, 3 ether);
         vm.label(_newSigner, "USER");
